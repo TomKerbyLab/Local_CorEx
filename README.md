@@ -1,4 +1,4 @@
-# Local Co-Information eXplanation (Local CoREX)
+# Local Co-Information eXplanation (Local CorEx)
 
 This repository provides utilities for working with Local CorEx models, including data loading helpers, partitioning logic, and plotting utilities. Install directly from GitHub via:
 
