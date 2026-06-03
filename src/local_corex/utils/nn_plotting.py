@@ -41,9 +41,13 @@ def plot_perturved_accuracy(
     num_clusters: int = 20,
     num_drop: int = 35,
     hidden_dim: int = 200,
+    save_path: str | None = None,
     return_probs: bool = True,
 ):
-    """Visualize accuracy deltas per cluster after pruning a hidden layer."""
+    """Visualize accuracy deltas per cluster after pruning a hidden layer.
+
+    If save_path is provided, the figure is written to that location before display.
+    """
     title = f"H{hidden_layer_idx + 1}"
 
     nodes = du.n_largest_magnitude_indexes(
@@ -88,6 +92,8 @@ def plot_perturved_accuracy(
     ax.yaxis.label.set_fontsize(16)
     plt.tick_params(labelsize=14)
     plt.legend(loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.225), prop={"size": 12})
+    if save_path is not None:
+        plt.gcf().savefig(save_path, bbox_inches="tight")
     plt.show()
 
     if return_probs:
@@ -107,9 +113,13 @@ def plot_perturved_accuracy_resnet(
     factor_num: int = 0,
     num_drop: int = 35,
     hidden_dim: int = 512,
+    save_path: str | None = None,
     return_probs: bool = True,
 ):
-    """Plot accuracy deltas caused by pruning ResNet's FC layer nodes."""
+    """Plot accuracy deltas caused by pruning ResNet's FC layer nodes.
+
+    If save_path is provided, the figure is written to that location before display.
+    """
     nodes = du.n_largest_magnitude_indexes(
         _corex_component(corex_model, factor_num)[:hidden_dim], num_drop
     ).tolist()
@@ -163,6 +173,8 @@ def plot_perturved_accuracy_resnet(
     ax.tick_params(axis="y", labelsize=14)
 
     plt.tight_layout()
+    if save_path is not None:
+        fig.savefig(save_path, bbox_inches="tight")
     plt.show()
 
     if return_probs:
@@ -171,7 +183,11 @@ def plot_perturved_accuracy_resnet(
     return None
 
 
-def plot_logit_effects(ave_diff_prob, class_names, bottom_vals=3, top_vals=10):
+def plot_logit_effects(ave_diff_prob, class_names, bottom_vals=3, top_vals=10, save_path: str | None = None):
+    """Plot the classes most affected by dropped nodes.
+
+    If save_path is provided, the figure is written to that location before display.
+    """
     top_n_values, top_n_indices = torch.topk(ave_diff_prob, top_vals)
     bottom_n_values, bottom_n_indices = torch.topk(ave_diff_prob, bottom_vals, largest=False)
     top_n_values = top_n_values.flip(0)
@@ -224,6 +240,8 @@ def plot_logit_effects(ave_diff_prob, class_names, bottom_vals=3, top_vals=10):
     plt.xticks(rotation=45, fontsize=14)
     plt.yticks(fontsize=14)
     plt.tight_layout()
+    if save_path is not None:
+        plt.gcf().savefig(save_path, bbox_inches="tight")
     plt.show()
 
 

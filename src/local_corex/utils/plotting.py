@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import imageio
 import numpy as np
 import pandas as pd
@@ -11,6 +13,11 @@ from scipy.spatial.distance import cosine
 from torch import nn
 
 from . import data as du
+
+
+def _save_figure(fig, save_path):
+    if save_path is not None:
+        fig.savefig(save_path, bbox_inches="tight")
 
 
 def _resolve_corex_model(corex_model, legacy_model, func_name):
@@ -55,7 +62,7 @@ def _corex_num_components(corex_model):
     raise ValueError("Unable to determine the number of components from the provided model.")
 
 
-def plot_corex_vars(model, df, factor=0, n_vals=10, ax=None):
+def plot_corex_vars(model, df, factor=0, n_vals=10, ax=None, save_path: str | None = None):
     '''
     Plots a barplot of the Mutual Information (MI) between the features in a dataframe and a 
     selected factor from the CorEx model.
@@ -88,12 +95,16 @@ def plot_corex_vars(model, df, factor=0, n_vals=10, ax=None):
     # Create a new plot if no axis (ax) is provided.
     if ax is None:
         plt.xlabel(f"MI with Factor {factor + 1}")
-        return plt.barh(top_features, mi_values)
+        result = plt.barh(top_features, mi_values)
+        _save_figure(plt.gcf(), save_path)
+        return result
     else:
         ax.set_xlabel(f'MI with Factor {factor + 1}')
-        return ax.barh(top_features, mi_values)
+        result = ax.barh(top_features, mi_values)
+        _save_figure(ax.figure, save_path)
+        return result
     
-def plot_n_factors(model, df, n=20, n_vals=10, cols=4):
+def plot_n_factors(model, df, n=20, n_vals=10, cols=4, save_path: str | None = None):
     # Handle both integer and list inputs for n
     if isinstance(n, (list, tuple)):
         factors_to_plot = list(n)  # Convert to list if tuple
@@ -121,10 +132,11 @@ def plot_n_factors(model, df, n=20, n_vals=10, cols=4):
         axes[j].axis('off')  # Turn off axes for extra subplots
 
     plt.tight_layout()  # Adjust layout to prevent overlap
+    _save_figure(fig, save_path)
     plt.show()
 
 
-def vis_diff_between_partitions(data, model_1, model_2, n_factors=5):
+def vis_diff_between_partitions(data, model_1, model_2, n_factors=5, save_path: str | None = None):
     for i in range(n_factors):
         max_dist = 0
         best_ind = None
@@ -145,13 +157,19 @@ def vis_diff_between_partitions(data, model_1, model_2, n_factors=5):
         plot_corex_vars(model_2, data, factor=best_ind, n_vals=10, ax=ax11) 
         ax11.set_title("Plotting top 10 values for second model")
         plt.tight_layout()
+        if save_path is not None:
+            save_path_obj = Path(save_path)
+            suffix = save_path_obj.suffix or ".png"
+            figure_path = save_path_obj.with_name(f"{save_path_obj.stem}_factor_{i + 1}{suffix}")
+            fig.savefig(figure_path, bbox_inches="tight")
         plt.show()
 
-def plot_reconstructions(x, x_hat, num_plots=3):
+def plot_reconstructions(x, x_hat, num_plots=3, save_path: str | None = None):
     fig, axes = plt.subplots(num_plots,2, figsize=(9,num_plots*4))
     for i in range(num_plots):
         axes[i,0].imshow(x[i].reshape(28,28))
         axes[i,1].imshow(x_hat[i].reshape(28,28))
+    _save_figure(fig, save_path)
     plt.show()
     
 def hidden_state_plot(
@@ -164,6 +182,7 @@ def hidden_state_plot(
     encoder_layer=None,
     output_dim=10,
     input_dim=(28, 28),
+    save_path: str | None = None,
     **kwargs,
 ):
     legacy_model = kwargs.pop("latent_transformer", None)
@@ -226,9 +245,10 @@ def hidden_state_plot(
         axes[3].imshow(extra, cmap='viridis')
         axes[3].set_title(f"Factor {i+1}")
         
+        _save_figure(fig, save_path)
         plt.show()
         
-def multi_rep_plot(lc_model, num_latent_factors, dims=[(28,28),(10,10)], num_per_row=2):
+def multi_rep_plot(lc_model, num_latent_factors, dims=[(28,28),(10,10)], num_per_row=2, save_path: str | None = None):
 
     fig, axes = plt.subplots(int(np.ceil(num_latent_factors / num_per_row)), num_per_row*2, figsize=(6*num_per_row, 3*(num_latent_factors/num_per_row)))
 
@@ -247,6 +267,7 @@ def multi_rep_plot(lc_model, num_latent_factors, dims=[(28,28),(10,10)], num_per
             ax.set_title(f"Latent Factor {i+1}, Rep {j+1}")
 
     plt.tight_layout()
+    _save_figure(fig, save_path)
     plt.show()
     
     
@@ -559,7 +580,7 @@ def create_animation_with_differences(frames, data, hist_frames, fps=2, concat_a
     
     return ani
 
-def generate_sim_matrix(model_1, model_2, n_components_1=None, n_components_2=None, model_1_title='Model_1', model_2_title='Model_2'):
+def generate_sim_matrix(model_1, model_2, n_components_1=None, n_components_2=None, model_1_title='Model_1', model_2_title='Model_2', save_path: str | None = None):
     """
     Generates and visualizes a similarity (correlation) matrix between the factors of two models.
 
@@ -602,9 +623,10 @@ def generate_sim_matrix(model_1, model_2, n_components_1=None, n_components_2=No
     plt.ylabel(f'{model_1_title} factor index')
     plt.title('Factor Correlation Matrix')
     plt.tight_layout()
+    _save_figure(plt.gcf(), save_path)
     plt.show()
 
-def plot_corex_mis_per_component(model, n_components=16, n_columns=4, component_shape=(28, 28), cbar_max=None):
+def plot_corex_mis_per_component(model, n_components=16, n_columns=4, component_shape=(28, 28), cbar_max=None, save_path: str | None = None):
     """
     Visualizes the mutual information scores (MIS) for components in a Corex model.
 
@@ -659,4 +681,5 @@ def plot_corex_mis_per_component(model, n_components=16, n_columns=4, component_
     cbar = fig.colorbar(im, cax=cbar_ax)
     cbar.set_label('Component Strength')
 
+    _save_figure(fig, save_path)
     plt.show()
