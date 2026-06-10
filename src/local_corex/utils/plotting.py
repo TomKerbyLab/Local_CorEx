@@ -192,6 +192,11 @@ def hidden_state_plot(
     model = _resolve_corex_model(corex_model, legacy_model, "hidden_state_plot")
     if ae_model is None:
         raise ValueError("hidden_state_plot requires an autoencoder model (ae_model).")
+    factors = list(factors)
+
+    per_factor_save = save_path is not None and len(factors) > 1
+    save_path_obj = Path(save_path) if save_path is not None else None
+
     # Force all computation on CPU.
     device = torch.device("cpu")
     ae_model.to(device)
@@ -244,8 +249,16 @@ def hidden_state_plot(
                  else np.array(perturbation))[latent_dim:latent_dim+output_dim].reshape(1, output_dim)
         axes[3].imshow(extra, cmap='viridis')
         axes[3].set_title(f"Factor {i+1}")
-        
-        _save_figure(fig, save_path)
+
+        if per_factor_save and save_path_obj is not None:
+            suffix = save_path_obj.suffix or ".png"
+            current_save_path = save_path_obj.with_name(
+                f"{save_path_obj.stem}_factor_{i + 1}{suffix}"
+            )
+        else:
+            current_save_path = save_path
+
+        _save_figure(fig, current_save_path)
         plt.show()
         
 def multi_rep_plot(lc_model, num_latent_factors, dims=[(28,28),(10,10)], num_per_row=2, save_path: str | None = None):
